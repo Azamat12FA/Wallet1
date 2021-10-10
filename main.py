@@ -3,9 +3,10 @@ import sys
 
 with sqlite3.connect('venv/database.db') as db:
     cursor = db.cursor()
-    query = """  CREATE TABLE IF NOT EXISTS expenses(Name TEXT, Balance INTEGER, Currency TEXT, Blocked INTEGER)  """
+    query = """  CREATE TABLE IF NOT EXISTS expenses(Name TEXT, Surname TEXT, Patronymic TEXT, City TEXT, Balance INTEGER, Currency TEXT, Blocked INTEGER)  """
     cursor.execute(query)
 
+# Вывод на экран навигационного меню
 def print_message():
     message = int(input('''Напишите пожалуйста какую информатцию вы хотите посмотреть: 
                                 1. Узнать баланс
@@ -20,41 +21,45 @@ def print_message():
     output = operations[message - 1]()
     print(output)
 
-def add_to_database(name_x, balance_x, currency_x, check_block_x):
+# Добавление в базу данных нового пользователя
+def add_to_database(name_x, last_name_x, middle_name_x, city_x, balance_x, currency_x, check_block_x):
     try:
-        cursor.execute("""  INSERT INTO expenses(name, balance, currency, blocked) VALUES('%s', '%s', '%s', '%s') """ % (
-            name_x, balance_x, currency_x, check_block_x))
+        cursor.execute("""  INSERT INTO expenses(name, surname, patronymic, city, balance, currency, blocked) VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s') """ % (
+            name_x, last_name_x, middle_name_x, city_x, balance_x, currency_x, check_block_x))
         print('Новый пользователь успешно добавлен')
         db.commit()
         print_message()
     except sqlite3.Error as error:
         print('Ошибка при работе с SQLite', error)
 
+# Проверка счёта на блокировку/не блокировку
 def check_blocked_account():
-    info = cursor.execute(""" SELECT blocked FROM expenses WHERE name = '%s' """ % (owner_name))
+    info = cursor.execute(""" SELECT blocked FROM expenses WHERE name = '%s' and surname = '%s' """ % (owner_name, last_name))
     x = info.fetchall()
     if bool(x[0][0]) == 0:
         return True
     else:
         return False
 
+# Печать информации о пользователе и его счёте
 def balance_print():
-    info = cursor.execute('SELECT * FROM expenses WHERE name=?', (owner_name,))
+    info = cursor.execute(""" SELECT * FROM expenses WHERE surname='%s' and name='%s' """ % (last_name, owner_name))
     result = info.fetchall()
     for row in result:
         print(f'Имя: {row[0]}')
-        print(f'Ваш баланс состовляет: {row[1]}')
-        print(f'Валюта: {row[2]}')
+        print(f'Фамилия: {row[1]}')
+        print(f'Ваш баланс состовляет: {row[4]}')
+        print(f'Валюта: {row[5]}')
     print_message()
 
+# Пополнение кошелька
 def set_money():
     try:
         if check_blocked_account():
-            sqlite_connection = sqlite3.connect('venv/database.db')
-            cursor = sqlite_connection.cursor()
+            cursor = db.cursor()
             x = int(input('Введите сумму которую вы хотите внести: '))
-            cursor.execute(""" Update expenses set balance = balance + '%s' where name = '%s' """ % (x, owner_name))
-            sqlite_connection.commit()
+            cursor.execute(""" Update expenses set balance = balance + '%s' WHERE name = '%s' and surname = '%s' """ % (x, owner_name, last_name))
+            db.commit()
             print('Пополнение кошелька прошла успешно!')
             cursor.close()
             print_message()
@@ -64,18 +69,18 @@ def set_money():
     except sqlite3.Error as error:
         print('Ошибка при работе с SQLite', error)
 
+# "Снятие" наличных
 def get_money():
     try:
         if check_blocked_account():
-            sqlite_connection = sqlite3.connect('venv/database.db')
-            cursor = sqlite_connection.cursor()
+            cursor = db.cursor()
             x = int(input('Введите сумму которую вы хотите снять: '))
-            info = cursor.execute(""" SELECT balance FROM expenses WHERE name='%s' """ % (owner_name))
+            info = cursor.execute(""" SELECT balance FROM expenses WHERE name='%s' and surname = '%s'""" % (owner_name, last_name))
             y = info.fetchone()
-            sqlite_connection.commit()
+            db.commit()
             if x < y[0]:
-                cursor.execute(""" Update expenses set balance = balance - '%s' where name = '%s' """ % (x, owner_name))
-                sqlite_connection.commit()
+                cursor.execute(""" Update expenses set balance = balance - '%s' WHERE name = '%s' and surname = '%s' """ % (x, owner_name, last_name))
+                db.commit()
                 print('Выдача наличных прошла успешно!')
             else:
                 print('Недостаточно средств на счёте!')
@@ -87,24 +92,25 @@ def get_money():
     except sqlite3.Error as error:
         print('Ошибка при работе с SQLite', error)
 
+# Перевод денежных средств на другой счёт
 def transfer_money():
     try:
         if check_blocked_account():
-            sqlite_connection = sqlite3.connect('venv/database.db')
-            cursor = sqlite_connection.cursor()
+            cursor = db.cursor()
             x = int(input('Введите сумму которую вы хотите перевести: '))
-            user_to = input('Введите имя пользователя, которому нужно перевести деньги: ')
-            info = cursor.execute(""" SELECT balance FROM expenses WHERE name='%s' """ % (owner_name))
+            user_surname_to = input('Введите фамилию и имя пользователя, которому нужно перевести деньги: ')
+            username_to = input()
+            info = cursor.execute(""" SELECT balance FROM expenses WHERE name='%s' and surname='%s' """ % (owner_name, last_name))
             info_user_out = info.fetchone()
 
-            info_user_to = cursor.execute(""" SELECT * FROM expenses WHERE name='%s' """ % (user_to))
+            info_user_to = cursor.execute(""" SELECT * FROM expenses WHERE name='%s' and surname='%s' """ % (username_to, user_surname_to))
 
-            if info_user_to:
+            if not info_user_to:
                 print('Проверьте правильность введёного имени! Мы не смогли найти данного пользователя в базе данных.')
             elif (x < info_user_out[0]):
-                cursor.execute(""" Update expenses set balance = balance + '%s' where name = '%s' """ % (x, user_to))
-                cursor.execute(""" Update expenses set balance = balance - '%s' where name = '%s' """ % (x, owner_name))
-                sqlite_connection.commit()
+                cursor.execute(""" Update expenses set balance = balance + '%s' WHERE name = '%s' and surname='%s' """ % (x, username_to, user_surname_to))
+                cursor.execute(""" Update expenses set balance = balance - '%s' WHERE name = '%s' and surname='%s' """ % (x, owner_name, last_name))
+                db.commit()
                 print('Перевод денег на другой счёт прошёл успешно!')
             else:
                 print('Недостаточно средств на счёте!')
@@ -116,30 +122,40 @@ def transfer_money():
     except sqlite3.Error as error:
         print('Ошибка при работе с SQLite', error)
 
+# Блокировка\Разблокировка счёта
 def blocked_or_unblocked_account():
     if not check_blocked_account():
         x = str(input('Вы хотите разблокировать свой счёт? '))
         if x in ['Yes', 'Да','yes','да']:
-            cursor.execute(""" Update expenses set blocked = '%s' where name = '%s' """ % (0, owner_name))
+            cursor.execute(""" Update expenses set blocked = '%s' WHERE name = '%s' and surname='%s' """ % (0, owner_name, last_name))
+            db.commit()
+            print('Ваш счёт успешно разблокирован.')
             print_message()
     else:
         x = str(input('Вы действительно хотите заблокировать свой счёт? '))
         if x in ['Yes', 'Да','yes','да']:
-            cursor.execute(""" Update expenses set blocked = '%s' where name = '%s' """ % (0, owner_name))
+            cursor.execute(""" Update expenses set blocked = '%s' where name = '%s' and surname='%s' """ % (1, owner_name, last_name))
+            db.commit()
+            print('Ваш счёт успешно заблокирован.')
             print_message()
 
+# Выход из аккаунта
 def exit_account():
     sys.exit(0)
 
-owner_name = input('''Здравствуйте,
-Введите пожалуйста ваше имя: 
-''')
+# Вход в аккаунт
+last_name = input('''Здравствуйте,\nВведите пожалуйста вашу фамилию: ''')
+owner_name = input('Введите пожалуйста ваше имя: ')
 
-info = cursor.execute('SELECT * FROM expenses WHERE name=?', (owner_name,))
+# Проверка введенных данных
+info = cursor.execute("""SELECT * FROM expenses WHERE name='%s' and surname='%s'""" % (owner_name, last_name))
 if info.fetchone() is None:
-    # Делаем когда нету человека в бд
+
+    # Выполняется при отсутствии пользователя в базе данных
+    middle_name = input('Введите пожалуйста ваше отчество: ')
+    city = input('Введите пожалуйста ваш город проживания: ')
     currency = input('Введите пожалуйста в какой валюте хранить ваши сбережения: ')
-    add_to_database(owner_name, 0, currency, 0)
+    add_to_database(owner_name, last_name, middle_name, city, 0, currency, 0)
 else:
-    # Делаем когда есть человек в бд
+    # Выполнятся при наличии пользователя в базе данных
     print_message()
