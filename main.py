@@ -125,7 +125,7 @@ def blocked_or_unblocked_account():
     else:
         x = str(input('Вы действительно хотите заблокировать свой счёт? '))
         if x in ['Yes', 'Да','yes','да']:
-            cursor.execute(""" Update expenses set blocked = '%s' where name = '%s' """ % (1, owner_name))
+            cursor.execute(""" Update expenses set blocked = '%s' where name = '%s' """ % (0, owner_name))
             print_message()
 
 def exit_account():
