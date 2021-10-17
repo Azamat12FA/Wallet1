@@ -198,11 +198,11 @@ def add_history(name, s):
 
 
 # Вход в аккаунт
-last_name = input('''Здравствуйте,\nВведите пожалуйста вашу фамилию: ''')
+last_name = input('Здравствуйте,\nВведите пожалуйста вашу фамилию: ')
 owner_name = input('Введите пожалуйста ваше имя: ')
 
 # Проверка введенных данных
-info = cursor.execute("""SELECT * FROM expenses WHERE name='%s' and surname='%s'""" % (owner_name, last_name))
+info = cursor.execute(""" SELECT * FROM expenses WHERE name = '%s' and surname = '%s' """ % (owner_name, last_name))
 if info.fetchone() is None:
 
     # Выполняется при отсутствии пользователя в базе данных
