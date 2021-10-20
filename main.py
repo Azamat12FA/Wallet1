@@ -180,6 +180,7 @@ def blocked_or_unblocked_account():
             print_message()
 
 
+# Вывод в консоль контекстное меню
 def print_history():
     message = int(input('''Напишите пожалуйста какую информатцию вы хотите посмотреть:
                                     1. Посмотреть всю историю.
@@ -191,6 +192,7 @@ def print_history():
     print(operations[message - 1]())
 
 
+# Печать всей историй
 def pr_hs_all():
     info = cursor.execute(""" SELECT * FROM History """)
     for i in info.fetchall():
@@ -199,6 +201,7 @@ def pr_hs_all():
     print_message()
 
 
+# Печть только истории пополнений
 def pr_hs_set():
     info = cursor.execute(""" SELECT * FROM History """)
     for i in info.fetchall():
@@ -207,6 +210,7 @@ def pr_hs_set():
     print_message()
 
 
+# Печть только истории снятий наличных
 def pr_hs_get():
     info = cursor.execute(""" SELECT * FROM History """)
     for i in info.fetchall():
@@ -215,6 +219,7 @@ def pr_hs_get():
     print_message()
 
 
+# Печть только истории переводов
 def pr_hs_transfer():
     info = cursor.execute(""" SELECT * FROM History """)
     for i in info.fetchall():
@@ -228,22 +233,16 @@ def exit_account():
     sys.exit(0)
 
 
+# Добавление новой истории
 def add_history(s):
     cursor.execute(
         """  INSERT INTO history(name, surname, date, event) VALUES('%s', '%s', '%s', '%s') """ % (
             last_name, owner_name, datetime.datetime.now().strftime('%d/%m/%Y %H:%M'), s))
 
 
-def check_field(s):
-    if s == ['', ' ']:
-        print('Это поле не может быть пустым!')
-
-
 # Вход в аккаунт
 last_name = input('Здравствуйте,\nВведите пожалуйста вашу фамилию: ')
-check_field(last_name)
 owner_name = input('Введите пожалуйста ваше имя: ')
-check_field(owner_name)
 
 # Проверка введенных данных
 info = cursor.execute(""" SELECT * FROM expenses WHERE name = '%s' and surname = '%s' """ % (owner_name, last_name))
